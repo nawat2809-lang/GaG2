@@ -1,4 +1,4 @@
--- GaG2 Crop Value Display - Final + Hotbar Fix
+-- GaG2 Complete Hub - Panel + Inventory Slot Labels
 -- Executor Script (Synapse X / KRNL / Delta etc.)
 
 local Players = game:GetService("Players")
@@ -6,14 +6,16 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
 
+-- ===== Format =====
 local function fmt(n)
     if n >= 1e9 then      return string.format("$%.2fB", n/1e9)
-    elseif n >= 1e6 then  return string.format("$%.3fM", n/1e6)
+    elseif n >= 1e6 then  return string.format("$%.2fM", n/1e6)
     elseif n >= 1000 then return string.format("$%.1fK", n/1000)
     else                   return "$"..tostring(math.floor(n))
     end
 end
 
+-- ===== Data =====
 local PRICE_PER_KG = {
     ["Carrot"]          = 9,
     ["Strawberry"]      = 3,
@@ -77,7 +79,7 @@ end
 
 local function tierColor(val)
     if val >= 10e6 then       return Color3.fromRGB(220, 80,  255)
-    elseif val >= 1e6 then    return Color3.fromRGB(255, 60,  60)
+    elseif val >= 1e6 then    return Color3.fromRGB(80,  255, 120)
     elseif val >= 100000 then return Color3.fromRGB(255, 140, 0)
     elseif val >= 10000 then  return Color3.fromRGB(255, 215, 0)
     elseif val >= 1000 then   return Color3.fromRGB(100, 180, 255)
@@ -85,22 +87,20 @@ local function tierColor(val)
     end
 end
 
--- ===== getCrops: สแกน Backpack + Character + Tool (hotbar) =====
-local function getCrops()
+-- ===== Scan Crops (ใช้ร่วมกันทั้ง 2 ส่วน) =====
+local function scanCrops()
     local crops = {}
     local seen = {}
 
     local function tryAdd(item)
         if seen[item] then return end
         seen[item] = true
-
         local harvested = item:GetAttribute("HarvestedFruit")
         local name      = item:GetAttribute("FruitName") or ""
         local weight    = item:GetAttribute("Weight") or 0
         local sizeMult  = item:GetAttribute("SizeMultiplier") or 1
         local mutation  = item:GetAttribute("Mutation") or ""
         if mutation == "None" then mutation = "" end
-
         if harvested == true and name ~= "" then
             local value = calcValue(name, weight, sizeMult, mutation)
             table.insert(crops, {
@@ -113,30 +113,24 @@ local function getCrops()
     local function scanFolder(folder)
         if not folder then return end
         for _, item in ipairs(folder:GetChildren()) do
-            if item:IsA("Configuration") then
-                tryAdd(item)
-            end
+            if item:IsA("Configuration") then tryAdd(item) end
             if item:IsA("Tool") then
-                tryAdd(item) -- attribute ติดกับ Tool โดยตรงตอนอยู่ hotbar
+                tryAdd(item)
                 for _, child in ipairs(item:GetChildren()) do
-                    if child:IsA("Configuration") then
-                        tryAdd(child)
-                    end
+                    if child:IsA("Configuration") then tryAdd(child) end
                 end
             end
         end
     end
 
     scanFolder(player.Backpack)
-    if player.Character then
-        scanFolder(player.Character)
-    end
+    if player.Character then scanFolder(player.Character) end
 
     table.sort(crops, function(a,b) return a.value > b.value end)
     return crops
 end
 
--- ===== ลบ GUI เก่า =====
+-- ===== Remove old GUI =====
 local old = playerGui:FindFirstChild("GaG2_UI")
 if old then old:Destroy() end
 
@@ -147,7 +141,7 @@ sg.DisplayOrder = 999
 sg.IgnoreGuiInset = true
 sg.Parent = playerGui
 
--- Panel
+-- ===== Panel =====
 local panel = Instance.new("Frame")
 panel.Size = UDim2.new(0, 310, 0, 500)
 panel.Position = UDim2.new(0, 12, 0.5, -250)
@@ -169,23 +163,23 @@ titleBar.BackgroundTransparency = 1
 titleBar.BorderSizePixel = 0
 titleBar.Parent = panel
 
-local playerNameLbl = Instance.new("TextLabel")
-playerNameLbl.Size = UDim2.new(1, -50, 1, 0)
-playerNameLbl.Position = UDim2.new(0, 16, 0, 0)
-playerNameLbl.BackgroundTransparency = 1
-playerNameLbl.Text = "Gag Hub"
-playerNameLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
-playerNameLbl.Font = Enum.Font.GothamBold
-playerNameLbl.TextSize = 15
-playerNameLbl.TextXAlignment = Enum.TextXAlignment.Left
-playerNameLbl.Parent = titleBar
+local titleLbl = Instance.new("TextLabel")
+titleLbl.Size = UDim2.new(1, -50, 1, 0)
+titleLbl.Position = UDim2.new(0, 16, 0, 0)
+titleLbl.BackgroundTransparency = 1
+titleLbl.Text = "Gag Hub"
+titleLbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+titleLbl.Font = Enum.Font.GothamBold
+titleLbl.TextSize = 15
+titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+titleLbl.Parent = titleBar
 
 local minBtn = Instance.new("TextButton")
 minBtn.Size = UDim2.new(0, 28, 0, 28)
 minBtn.Position = UDim2.new(1, -38, 0.5, -14)
 minBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 minBtn.BorderSizePixel = 0
-minBtn.Text = "−"
+minBtn.Text = "-"
 minBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 minBtn.Font = Enum.Font.GothamBold
 minBtn.TextSize = 16
@@ -274,17 +268,17 @@ minBtn.MouseButton1Click:Connect(function()
     scroll.Visible       = not minimized
     totalBox.Visible     = not minimized
     allFruitsLbl.Visible = not minimized
-    minBtn.Text = minimized and "+" or "−"
+    minBtn.Text = minimized and "+" or "-"
     panel.Size = UDim2.new(0, 310, 0, minimized and 44 or fullHeight)
 end)
 
--- ===== Row =====
+-- ===== Panel Row =====
 local function makeRow(crop, order)
     local tc = tierColor(crop.value)
     local displayMut = crop.mutation ~= "" and (" ["..crop.mutation.."]") or ""
     local mutMult = MUTATION_MULT[crop.mutation]
     local mutColor = MUTATION_COLOR[crop.mutation] or Color3.fromRGB(180,180,180)
-    local multTag = mutMult and string.format(" ×%.2fx", mutMult) or ""
+    local multTag = mutMult and string.format(" x%.2fx", mutMult) or ""
 
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 54)
@@ -321,7 +315,7 @@ local function makeRow(crop, order)
     wl.Size = UDim2.new(0.58, 0, 0.4, 0)
     wl.Position = UDim2.new(0, 14, 0.54, 0)
     wl.BackgroundTransparency = 1
-    wl.Text = string.format("%.2fkg  ×%.2f size%s", crop.weight, crop.sizeMult, multTag)
+    wl.Text = string.format("%.2fkg  x%.2f size%s", crop.weight, crop.sizeMult, multTag)
     wl.TextColor3 = Color3.fromRGB(110, 110, 130)
     wl.Font = Enum.Font.Gotham
     wl.TextSize = 10
@@ -340,13 +334,93 @@ local function makeRow(crop, order)
     vl.Parent = row
 end
 
--- ===== Update =====
+-- ===== Slot Labels =====
+local LABEL_NAME = "GaG2_PriceLabel"
+
+local function getGrid()
+    local bg = playerGui:FindFirstChild("BackpackGui")
+    if not bg then return nil end
+    local bgInner = bg:FindFirstChild("BackpackGui")
+    if bgInner then
+        -- path: BackpackGui.BackpackGui.Backpack.Inventory.ScrollingFrame.UIGridFrame
+        local bp = bgInner:FindFirstChild("Backpack")
+        if bp then
+            local inv = bp:FindFirstChild("Inventory")
+            if inv then
+                local sf = inv:FindFirstChild("ScrollingFrame")
+                if sf then return sf:FindFirstChild("UIGridFrame") end
+            end
+        end
+    end
+    -- fallback path: BackpackGui.Backpack.Inventory.ScrollingFrame.UIGridFrame
+    local bp = bg:FindFirstChild("Backpack")
+    if bp then
+        local inv = bp:FindFirstChild("Inventory")
+        if inv then
+            local sf = inv:FindFirstChild("ScrollingFrame")
+            if sf then return sf:FindFirstChild("UIGridFrame") end
+        end
+    end
+    return nil
+end
+
+local function updateSlotLabels(crops)
+    local grid = getGrid()
+    if not grid then return end
+
+    -- สร้าง lookup จาก crops ที่สแกนมาแล้ว
+    local lookup = {}
+    for _, crop in ipairs(crops) do
+        if not lookup[crop.name] then lookup[crop.name] = {} end
+        table.insert(lookup[crop.name], crop.value)
+    end
+
+    local nameIndex = {}
+    for _, slot in ipairs(grid:GetChildren()) do
+        if slot:IsA("TextButton") then
+            local toolNameLbl = slot:FindFirstChild("ToolName")
+            local cropName = toolNameLbl and toolNameLbl.Text or ""
+
+            local oldLabel = slot:FindFirstChild(LABEL_NAME)
+            if oldLabel then oldLabel:Destroy() end
+
+            if not PRICE_PER_KG[cropName] then continue end
+
+            if not nameIndex[cropName] then nameIndex[cropName] = 1 end
+            local values = lookup[cropName]
+            local value = values and values[nameIndex[cropName]] or 0
+            nameIndex[cropName] = nameIndex[cropName] + 1
+
+            if value <= 0 then continue end
+
+            local label = Instance.new("TextLabel")
+            label.Name = LABEL_NAME
+            label.Size = UDim2.new(1, 0, 0, 18)
+            label.Position = UDim2.new(0, 0, 0, 0)
+            label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            label.BackgroundTransparency = 0.3
+            label.Text = fmt(value)
+            label.TextColor3 = tierColor(value)
+            label.Font = Enum.Font.GothamBold
+            label.TextSize = 11
+            label.TextScaled = false
+            label.ZIndex = 10
+            label.Parent = slot
+            Instance.new("UICorner", label).CornerRadius = UDim.new(0, 3)
+        end
+    end
+end
+
+-- ===== Master Update (รวม Panel + Slots) =====
 local function update()
+    -- สแกนครั้งเดียว ใช้ร่วมกันทั้งคู่
+    local crops = scanCrops()
+
+    -- อัปเดต Panel
     for _, c in ipairs(scroll:GetChildren()) do
         if c:IsA("Frame") then c:Destroy() end
     end
 
-    local crops = getCrops()
     local grand = 0
     for i, crop in ipairs(crops) do
         makeRow(crop, i)
@@ -371,6 +445,9 @@ local function update()
         fullHeight = math.max(200, math.min(550, 148 + #crops * 60 + 20))
         panel.Size = UDim2.new(0, 310, 0, fullHeight)
     end
+
+    -- อัปเดต Slot Labels (ส่ง crops ที่สแกนแล้วไปใช้ต่อ)
+    pcall(updateSlotLabels, crops)
 end
 
 -- ===== Realtime Connections =====
@@ -400,14 +477,13 @@ player.Backpack.ChildRemoved:Connect(function()
 end)
 
 connectCharacter(player.Character)
-
 player.CharacterAdded:Connect(function(char)
     task.wait(0.5)
     connectCharacter(char)
     pcall(update)
 end)
 
--- Safety net ทุก 1 วิ
+-- Safety refresh ทุก 1 วิ
 task.spawn(function()
     while sg and sg.Parent do
         task.wait(1)
@@ -416,4 +492,4 @@ task.spawn(function()
 end)
 
 update()
-print("[GaG2] ✅ Hotbar Fix! Scans Configuration + Tool attributes")
+print("[GaG2] Complete Hub loaded! Panel + Slot Labels active!")
