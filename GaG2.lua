@@ -6,7 +6,6 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player.PlayerGui
 
--- ===== Format =====
 local function fmt(n)
     if n >= 1e9 then      return string.format("$%.2fB", n/1e9)
     elseif n >= 1e6 then  return string.format("$%.2fM", n/1e6)
@@ -15,7 +14,6 @@ local function fmt(n)
     end
 end
 
--- ===== Data =====
 local PRICE_PER_KG = {
     ["Carrot"]          = 9,
     ["Strawberry"]      = 3,
@@ -87,7 +85,6 @@ local function tierColor(val)
     end
 end
 
--- ===== Scan Crops (ใช้ร่วมกันทั้ง 2 ส่วน) =====
 local function scanCrops()
     local crops = {}
     local seen = {}
@@ -125,12 +122,52 @@ local function scanCrops()
 
     scanFolder(player.Backpack)
     if player.Character then scanFolder(player.Character) end
-
     table.sort(crops, function(a,b) return a.value > b.value end)
     return crops
 end
 
--- ===== Remove old GUI =====
+-- สร้าง lookup จาก Backpack โดยตรง (weight-based matching)
+local function buildWeightLookup()
+    local lookup = {}
+
+    local function tryItem(item)
+        if item:GetAttribute("HarvestedFruit") ~= true then return end
+        local name     = item:GetAttribute("FruitName") or ""
+        local weight   = item:GetAttribute("Weight") or 0
+        local sizeMult = item:GetAttribute("SizeMultiplier") or 1
+        local mutation = item:GetAttribute("Mutation") or ""
+        if mutation == "None" then mutation = "" end
+        if name == "" then return end
+        local value = calcValue(name, weight, sizeMult, mutation)
+        if not lookup[name] then lookup[name] = {} end
+        table.insert(lookup[name], {
+            weight=weight, value=value, used=false
+        })
+    end
+
+    for _, item in ipairs(player.Backpack:GetChildren()) do
+        pcall(tryItem, item)
+        if item:IsA("Tool") then
+            pcall(tryItem, item)
+            for _, child in ipairs(item:GetChildren()) do
+                pcall(tryItem, child)
+            end
+        end
+    end
+    if player.Character then
+        for _, item in ipairs(player.Character:GetChildren()) do
+            pcall(tryItem, item)
+            if item:IsA("Tool") then
+                pcall(tryItem, item)
+                for _, child in ipairs(item:GetChildren()) do
+                    pcall(tryItem, child)
+                end
+            end
+        end
+    end
+    return lookup
+end
+
 local old = playerGui:FindFirstChild("GaG2_UI")
 if old then old:Destroy() end
 
@@ -141,7 +178,6 @@ sg.DisplayOrder = 999
 sg.IgnoreGuiInset = true
 sg.Parent = playerGui
 
--- ===== Panel =====
 local panel = Instance.new("Frame")
 panel.Size = UDim2.new(0, 310, 0, 500)
 panel.Position = UDim2.new(0, 12, 0.5, -250)
@@ -156,7 +192,6 @@ panelStroke.Color = Color3.fromRGB(50, 50, 60)
 panelStroke.Thickness = 1.5
 panelStroke.Parent = panel
 
--- Title bar
 local titleBar = Instance.new("Frame")
 titleBar.Size = UDim2.new(1, 0, 0, 44)
 titleBar.BackgroundTransparency = 1
@@ -186,7 +221,6 @@ minBtn.TextSize = 16
 minBtn.Parent = titleBar
 Instance.new("UICorner", minBtn).CornerRadius = UDim.new(0, 6)
 
--- Total box
 local totalBox = Instance.new("Frame")
 totalBox.Size = UDim2.new(1, -20, 0, 56)
 totalBox.Position = UDim2.new(0, 10, 0, 48)
@@ -214,7 +248,6 @@ allFruitsLbl.Font = Enum.Font.GothamBold
 allFruitsLbl.TextSize = 11
 allFruitsLbl.Parent = panel
 
--- Scroll
 local scroll = Instance.new("ScrollingFrame")
 scroll.Size = UDim2.new(1, -16, 1, -148)
 scroll.Position = UDim2.new(0, 8, 0, 134)
@@ -236,7 +269,6 @@ lpad.PaddingRight = UDim.new(0, 2)
 lpad.PaddingTop = UDim.new(0, 2)
 lpad.Parent = scroll
 
--- ===== Drag =====
 local dragging, dragStart, startPos = false, nil, nil
 titleBar.InputBegan:Connect(function(inp)
     if inp.UserInputType == Enum.UserInputType.MouseButton1
@@ -260,7 +292,6 @@ UserInputService.InputChanged:Connect(function(inp)
     end
 end)
 
--- ===== Minimize =====
 local minimized = false
 local fullHeight = 500
 minBtn.MouseButton1Click:Connect(function()
@@ -272,13 +303,12 @@ minBtn.MouseButton1Click:Connect(function()
     panel.Size = UDim2.new(0, 310, 0, minimized and 44 or fullHeight)
 end)
 
--- ===== Panel Row =====
 local function makeRow(crop, order)
     local tc = tierColor(crop.value)
     local displayMut = crop.mutation ~= "" and (" ["..crop.mutation.."]") or ""
     local mutMult = MUTATION_MULT[crop.mutation]
     local mutColor = MUTATION_COLOR[crop.mutation] or Color3.fromRGB(180,180,180)
-    local multTag = mutMult and string.format(" x%.2fx", mutMult) or ""
+    local multTag = mutMult and string.format(" x%.2f", mutMult) or ""
 
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 54)
@@ -315,7 +345,7 @@ local function makeRow(crop, order)
     wl.Size = UDim2.new(0.58, 0, 0.4, 0)
     wl.Position = UDim2.new(0, 14, 0.54, 0)
     wl.BackgroundTransparency = 1
-    wl.Text = string.format("%.2fkg  x%.2f size%s", crop.weight, crop.sizeMult, multTag)
+    wl.Text = string.format("%.2fkg x%.2f size%s", crop.weight, crop.sizeMult, multTag)
     wl.TextColor3 = Color3.fromRGB(110, 110, 130)
     wl.Font = Enum.Font.Gotham
     wl.TextSize = 10
@@ -334,48 +364,29 @@ local function makeRow(crop, order)
     vl.Parent = row
 end
 
--- ===== Slot Labels =====
 local LABEL_NAME = "GaG2_PriceLabel"
 
 local function getGrid()
     local bg = playerGui:FindFirstChild("BackpackGui")
     if not bg then return nil end
-    local bgInner = bg:FindFirstChild("BackpackGui")
-    if bgInner then
-        -- path: BackpackGui.BackpackGui.Backpack.Inventory.ScrollingFrame.UIGridFrame
-        local bp = bgInner:FindFirstChild("Backpack")
-        if bp then
-            local inv = bp:FindFirstChild("Inventory")
-            if inv then
-                local sf = inv:FindFirstChild("ScrollingFrame")
-                if sf then return sf:FindFirstChild("UIGridFrame") end
-            end
+    local function findGrid(obj, depth)
+        if depth > 6 then return nil end
+        if obj.Name == "UIGridFrame" then return obj end
+        for _, c in ipairs(obj:GetChildren()) do
+            local result = findGrid(c, depth + 1)
+            if result then return result end
         end
+        return nil
     end
-    -- fallback path: BackpackGui.Backpack.Inventory.ScrollingFrame.UIGridFrame
-    local bp = bg:FindFirstChild("Backpack")
-    if bp then
-        local inv = bp:FindFirstChild("Inventory")
-        if inv then
-            local sf = inv:FindFirstChild("ScrollingFrame")
-            if sf then return sf:FindFirstChild("UIGridFrame") end
-        end
-    end
-    return nil
+    return findGrid(bg, 0)
 end
 
-local function updateSlotLabels(crops)
+local function updateSlotLabels()
     local grid = getGrid()
     if not grid then return end
 
-    -- สร้าง lookup จาก crops ที่สแกนมาแล้ว
-    local lookup = {}
-    for _, crop in ipairs(crops) do
-        if not lookup[crop.name] then lookup[crop.name] = {} end
-        table.insert(lookup[crop.name], crop.value)
-    end
+    local lookup = buildWeightLookup()
 
-    local nameIndex = {}
     for _, slot in ipairs(grid:GetChildren()) do
         if slot:IsA("TextButton") then
             local toolNameLbl = slot:FindFirstChild("ToolName")
@@ -385,13 +396,40 @@ local function updateSlotLabels(crops)
             if oldLabel then oldLabel:Destroy() end
 
             if not PRICE_PER_KG[cropName] then continue end
+            if not lookup[cropName] then continue end
 
-            if not nameIndex[cropName] then nameIndex[cropName] = 1 end
-            local values = lookup[cropName]
-            local value = values and values[nameIndex[cropName]] or 0
-            nameIndex[cropName] = nameIndex[cropName] + 1
+            -- ดึง weight จาก ToolCount text เช่น "65.67kg"
+            local toolCount = slot:FindFirstChild("ToolCount")
+            local slotWeight = nil
+            if toolCount and toolCount:IsA("TextLabel") then
+                local w = toolCount.Text:match("([%d%.]+)kg")
+                if w then slotWeight = tonumber(w) end
+            end
 
-            if value <= 0 then continue end
+            -- จับคู่กับ item ใน lookup ที่น้ำหนักใกล้เคียงที่สุด
+            local bestEntry = nil
+            local bestDiff = math.huge
+
+            for _, entry in ipairs(lookup[cropName]) do
+                if not entry.used then
+                    if slotWeight then
+                        local diff = math.abs(entry.weight - slotWeight)
+                        if diff < bestDiff then
+                            bestDiff = diff
+                            bestEntry = entry
+                        end
+                    else
+                        if not bestEntry then
+                            bestEntry = entry
+                        end
+                    end
+                end
+            end
+
+            if not bestEntry then continue end
+            bestEntry.used = true
+
+            if bestEntry.value <= 0 then continue end
 
             local label = Instance.new("TextLabel")
             label.Name = LABEL_NAME
@@ -399,8 +437,8 @@ local function updateSlotLabels(crops)
             label.Position = UDim2.new(0, 0, 0, 0)
             label.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
             label.BackgroundTransparency = 0.3
-            label.Text = fmt(value)
-            label.TextColor3 = tierColor(value)
+            label.Text = fmt(bestEntry.value)
+            label.TextColor3 = tierColor(bestEntry.value)
             label.Font = Enum.Font.GothamBold
             label.TextSize = 11
             label.TextScaled = false
@@ -411,12 +449,9 @@ local function updateSlotLabels(crops)
     end
 end
 
--- ===== Master Update (รวม Panel + Slots) =====
 local function update()
-    -- สแกนครั้งเดียว ใช้ร่วมกันทั้งคู่
     local crops = scanCrops()
 
-    -- อัปเดต Panel
     for _, c in ipairs(scroll:GetChildren()) do
         if c:IsA("Frame") then c:Destroy() end
     end
@@ -446,11 +481,9 @@ local function update()
         panel.Size = UDim2.new(0, 310, 0, fullHeight)
     end
 
-    -- อัปเดต Slot Labels (ส่ง crops ที่สแกนแล้วไปใช้ต่อ)
-    pcall(updateSlotLabels, crops)
+    pcall(updateSlotLabels)
 end
 
--- ===== Realtime Connections =====
 local function connectCharacter(char)
     if not char then return end
     char.ChildAdded:Connect(function(child)
@@ -483,7 +516,6 @@ player.CharacterAdded:Connect(function(char)
     pcall(update)
 end)
 
--- Safety refresh ทุก 1 วิ
 task.spawn(function()
     while sg and sg.Parent do
         task.wait(1)
