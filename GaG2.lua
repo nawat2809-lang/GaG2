@@ -48,14 +48,14 @@ local PRICE_PER_KG = {
 }
 
 local MUTATION_MULT = {
-    ["Gold"]       = 17.3,  -- verified
-    ["Aurora"]     = 34.3,  -- verified
-    ["Bloodlit"]   = 94.8,  -- verified
-    ["Rainbow"]    = 30,    -- ยังไม่ verified
-    ["Electric"]   = 25,    -- ยังไม่ verified
-    ["Starstruck"] = 50,    -- ยังไม่ verified
-    ["Frozen"]     = 14,    -- ยังไม่ verified
-    ["Solarflare"] = 5,     -- ยังไม่ verified
+    ["Gold"]       = 37.0,
+    ["Aurora"]     = 84.8,
+    ["Bloodlit"]   = 234.3,
+    ["Electric"]   = 90.0,
+    ["Rainbow"]    = 30,
+    ["Starstruck"] = 50,
+    ["Frozen"]     = 14,
+    ["Solarflare"] = 5,
 }
 
 local MUTATION_COLOR = {
