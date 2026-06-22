@@ -44,7 +44,7 @@ local PRICE_PER_KG = {
     ["Poison Apple"]    = 812,
     ["Ghost Pepper"]    = 2260,
     ["Moon Bloom"]      = 8120,
-    ["Dragon's Breath"] = 3070,
+    ["Dragon's Breath"] = 429,
 }
 
 local MUTATION_MULT = {
