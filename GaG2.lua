@@ -48,13 +48,13 @@ local PRICE_PER_KG = {
 }
 
 local MUTATION_MULT = {
-    ["Electric"]   = 5.10,
-    ["Aurora"]     = 9.69,
-    ["Frozen"]     = 4.41,
     ["Gold"]       = 10,
-    ["Bloodlit"]   = 10,
     ["Rainbow"]    = 30,
+    ["Bloodlit"]   = 60,
+    ["Electric"]   = 25,
     ["Starstruck"] = 50,
+    ["Frozen"]     = 14,
+    ["Aurora"]     = 40,
     ["Solarflare"] = 5,
 }
 
