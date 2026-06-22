@@ -43,7 +43,7 @@ local PRICE_PER_KG = {
     ["Pomegranate"]     = 812,
     ["Poison Apple"]    = 812,
     ["Ghost Pepper"]    = 2260,
-    ["Moon Bloom"] = 976,
+    ["Moon Bloom"]      = 976,
     ["Dragon's Breath"] = 429,
 }
 
