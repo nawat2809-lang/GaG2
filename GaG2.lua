@@ -48,25 +48,25 @@ local PRICE_PER_KG = {
 }
 
 local MUTATION_MULT = {
-    ["Gold"]       = 10,
-    ["Rainbow"]    = 30,
-    ["Bloodlit"]   = 60,
-    ["Electric"]   = 25,
-    ["Starstruck"] = 50,
-    ["Frozen"]     = 14,
-    ["Aurora"]     = 40,
-    ["Solarflare"] = 5,
-}
-
-local MUTATION_MULT = {
     ["Gold"]       = 17.3,  -- verified
-    ["Rainbow"]    = 30,    -- ยังไม่ verified
+    ["Aurora"]     = 34.3,  -- verified
     ["Bloodlit"]   = 94.8,  -- verified
+    ["Rainbow"]    = 30,    -- ยังไม่ verified
     ["Electric"]   = 25,    -- ยังไม่ verified
     ["Starstruck"] = 50,    -- ยังไม่ verified
     ["Frozen"]     = 14,    -- ยังไม่ verified
-    ["Aurora"]     = 34.3,  -- verified
     ["Solarflare"] = 5,     -- ยังไม่ verified
+}
+
+local MUTATION_COLOR = {
+    ["Electric"]   = Color3.fromRGB(100, 180, 255),
+    ["Aurora"]     = Color3.fromRGB(160, 80,  255),
+    ["Frozen"]     = Color3.fromRGB(80,  210, 255),
+    ["Gold"]       = Color3.fromRGB(255, 200, 0),
+    ["Bloodlit"]   = Color3.fromRGB(200, 30,  30),
+    ["Rainbow"]    = Color3.fromRGB(255, 120, 200),
+    ["Starstruck"] = Color3.fromRGB(255, 240, 100),
+    ["Solarflare"] = Color3.fromRGB(255, 140, 0),
 }
 
 local function calcValue(name, weight, sizeMult, mutation)
@@ -126,7 +126,6 @@ local function scanCrops()
     return crops
 end
 
--- สร้าง lookup จาก Backpack โดยตรง (weight-based matching)
 local function buildWeightLookup()
     local lookup = {}
 
@@ -140,9 +139,7 @@ local function buildWeightLookup()
         if name == "" then return end
         local value = calcValue(name, weight, sizeMult, mutation)
         if not lookup[name] then lookup[name] = {} end
-        table.insert(lookup[name], {
-            weight=weight, value=value, used=false
-        })
+        table.insert(lookup[name], {weight=weight, value=value, used=false})
     end
 
     for _, item in ipairs(player.Backpack:GetChildren()) do
@@ -308,7 +305,7 @@ local function makeRow(crop, order)
     local displayMut = crop.mutation ~= "" and (" ["..crop.mutation.."]") or ""
     local mutMult = MUTATION_MULT[crop.mutation]
     local mutColor = MUTATION_COLOR[crop.mutation] or Color3.fromRGB(180,180,180)
-    local multTag = mutMult and string.format(" x%.2f", mutMult) or ""
+    local multTag = mutMult and string.format(" x%.1f", mutMult) or ""
 
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 54)
@@ -398,7 +395,6 @@ local function updateSlotLabels()
             if not PRICE_PER_KG[cropName] then continue end
             if not lookup[cropName] then continue end
 
-            -- ดึง weight จาก ToolCount text เช่น "65.67kg"
             local toolCount = slot:FindFirstChild("ToolCount")
             local slotWeight = nil
             if toolCount and toolCount:IsA("TextLabel") then
@@ -406,7 +402,6 @@ local function updateSlotLabels()
                 if w then slotWeight = tonumber(w) end
             end
 
-            -- จับคู่กับ item ใน lookup ที่น้ำหนักใกล้เคียงที่สุด
             local bestEntry = nil
             local bestDiff = math.huge
 
@@ -428,7 +423,6 @@ local function updateSlotLabels()
 
             if not bestEntry then continue end
             bestEntry.used = true
-
             if bestEntry.value <= 0 then continue end
 
             local label = Instance.new("TextLabel")
