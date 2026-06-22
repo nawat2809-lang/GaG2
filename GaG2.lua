@@ -58,15 +58,15 @@ local MUTATION_MULT = {
     ["Solarflare"] = 5,
 }
 
-local MUTATION_COLOR = {
-    ["Electric"]   = Color3.fromRGB(100, 180, 255),
-    ["Aurora"]     = Color3.fromRGB(160, 80,  255),
-    ["Frozen"]     = Color3.fromRGB(80,  210, 255),
-    ["Gold"]       = Color3.fromRGB(255, 200, 0),
-    ["Bloodlit"]   = Color3.fromRGB(200, 30,  30),
-    ["Rainbow"]    = Color3.fromRGB(255, 120, 200),
-    ["Starstruck"] = Color3.fromRGB(255, 240, 100),
-    ["Solarflare"] = Color3.fromRGB(255, 140, 0),
+local MUTATION_MULT = {
+    ["Gold"]       = 17.3,  -- verified
+    ["Rainbow"]    = 30,    -- ยังไม่ verified
+    ["Bloodlit"]   = 94.8,  -- verified
+    ["Electric"]   = 25,    -- ยังไม่ verified
+    ["Starstruck"] = 50,    -- ยังไม่ verified
+    ["Frozen"]     = 14,    -- ยังไม่ verified
+    ["Aurora"]     = 34.3,  -- verified
+    ["Solarflare"] = 5,     -- ยังไม่ verified
 }
 
 local function calcValue(name, weight, sizeMult, mutation)
